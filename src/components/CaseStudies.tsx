@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { ArrowUpRight, Gauge, Zap, ExternalLink, Filter } from 'lucide-react';
 import { CASE_STUDIES } from '../data/portfolioData';
 import { CaseStudy } from '../types';
-import { CaseStudyModal } from './CaseStudyModal';
+
+// Code-split the modal (tabs, forms, extra content) so it doesn't block critical page load
+const CaseStudyModal = React.lazy(() => import('./CaseStudyModal').then(m => ({ default: m.CaseStudyModal })));
 
 interface CaseStudiesProps {
   onRequestAudit: () => void;
@@ -195,13 +197,15 @@ export const CaseStudies: React.FC<CaseStudiesProps> = ({ onRequestAudit }) => {
           ))}
         </div>
 
-        {/* Modal for In-Depth Specs */}
+        {/* Modal for In-Depth Specs (lazy loaded on demand) */}
         {selectedCaseStudy && (
-          <CaseStudyModal
-            caseStudy={selectedCaseStudy}
-            onClose={() => setSelectedCaseStudy(null)}
-            onRequestAudit={onRequestAudit}
-          />
+          <Suspense fallback={null}>
+            <CaseStudyModal
+              caseStudy={selectedCaseStudy}
+              onClose={() => setSelectedCaseStudy(null)}
+              onRequestAudit={onRequestAudit}
+            />
+          </Suspense>
         )}
 
       </div>
