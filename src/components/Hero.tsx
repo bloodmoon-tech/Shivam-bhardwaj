@@ -218,7 +218,7 @@ export const Hero: React.FC<HeroProps> = ({ onViewCaseStudies, onRequestAudit, o
                       sizes="(max-width: 640px) 340px, 380px"
                     />
                     <img
-                      src="/images/shivam_portrait_400w.webp"
+                      src="/images/shivam_realistic_portrait_1790262778042.webp"
                       alt="Shivam Bhardwaj - Fast Custom WordPress Specialist"
                       width="340"
                       height="340"

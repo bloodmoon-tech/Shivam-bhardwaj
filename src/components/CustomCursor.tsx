@@ -1,18 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 export const CustomCursor: React.FC = () => {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isClicked, setIsClicked] = useState(false);
-  const [cursorText, setCursorText] = useState('');
-  const [isVisible, setIsVisible] = useState(false);
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
-
+  const containerRef = useRef<HTMLDivElement>(null);
   const auraRef = useRef<HTMLDivElement>(null);
   const dotRef = useRef<HTMLDivElement>(null);
-  const targetRef = useRef({ x: -100, y: -100 });
-  const currentRef = useRef({ x: -100, y: -100 });
-  const rafId = useRef<number | null>(null);
-  const isVisibleRef = useRef(false);
+  const textRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     // Check if touchscreen or touch-enabled display
@@ -22,186 +14,238 @@ export const CustomCursor: React.FC = () => {
       'ontouchstart' in window ||
       navigator.maxTouchPoints > 0
     ) {
-      setIsTouchDevice(true);
       return;
     }
+
+    const container = containerRef.current;
+    const aura = auraRef.current;
+    const dot = dotRef.current;
+    const textSpan = textRef.current;
+    if (!container || !aura || !dot) return;
+
+    let targetX = -100;
+    let targetY = -100;
+    let currentX = -100;
+    let currentY = -100;
+    let isVisible = false;
+    let isHovered = false;
+    let isClicked = false;
+    let currentText = '';
+    let rafId: number | null = null;
 
     const isFillableElement = (el: HTMLElement | null) => {
       return !!el?.closest('input, textarea, select, [contenteditable="true"], .fill-input');
     };
 
+    const setVisibility = (visible: boolean) => {
+      isVisible = visible;
+      container.style.opacity = visible ? '1' : '0';
+    };
+
+    const updateHoverState = (hovered: boolean, text: string) => {
+      if (isHovered === hovered && currentText === text) return;
+      isHovered = hovered;
+      currentText = text;
+
+      if (hovered) {
+        aura.style.width = '46px';
+        aura.style.height = '46px';
+        aura.style.backgroundColor = 'rgba(16, 185, 129, 0.14)';
+        aura.style.borderColor = 'rgba(16, 185, 129, 0.55)';
+        aura.style.boxShadow = '0 8px 20px -4px rgba(16, 185, 129, 0.25)';
+
+        dot.style.width = '8px';
+        dot.style.height = '8px';
+        dot.style.backgroundColor = '#059669';
+      } else {
+        aura.style.width = '32px';
+        aura.style.height = '32px';
+        aura.style.backgroundColor = 'rgba(16, 185, 129, 0.08)';
+        aura.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+        aura.style.boxShadow = 'none';
+
+        dot.style.width = '10px';
+        dot.style.height = '10px';
+        dot.style.backgroundColor = 'rgba(15, 23, 42, 0.9)';
+      }
+
+      if (textSpan) {
+        if (text) {
+          textSpan.textContent = text;
+          textSpan.style.display = 'inline-block';
+        } else {
+          textSpan.textContent = '';
+          textSpan.style.display = 'none';
+        }
+      }
+    };
+
     const handleMouseMove = (e: MouseEvent) => {
-      targetRef.current.x = e.clientX;
-      targetRef.current.y = e.clientY;
+      targetX = e.clientX;
+      targetY = e.clientY;
 
       const target = e.target as HTMLElement | null;
 
-      // Disable and hide moving cursor animation completely whenever hovering or clicking any fillable field/placeholder
+      // Disable when hovering any fillable input or placeholder
       if (isFillableElement(target)) {
-        if (isVisibleRef.current) {
-          isVisibleRef.current = false;
-          setIsVisible(false);
-        }
+        if (isVisible) setVisibility(false);
         return;
       }
 
-      // If an input is currently active/focused, keep cursor animation hidden
+      // If an input is currently active/focused, keep cursor hidden
       const activeEl = document.activeElement as HTMLElement | null;
       if (isFillableElement(activeEl)) {
-        if (isVisibleRef.current) {
-          isVisibleRef.current = false;
-          setIsVisible(false);
-        }
+        if (isVisible) setVisibility(false);
         return;
       }
 
-      if (!isVisibleRef.current) {
-        isVisibleRef.current = true;
-        setIsVisible(true);
-        currentRef.current.x = e.clientX;
-        currentRef.current.y = e.clientY;
+      if (!isVisible) {
+        currentX = e.clientX;
+        currentY = e.clientY;
+        setVisibility(true);
       }
 
-      // Check hovered interactive clickable element (buttons, links, case studies)
+      // Check hovered interactive clickable element
       if (target) {
         const interactiveEl = target.closest(
           'button, a, [role="button"], .cursor-pointer, [data-cursor], [data-cursor-text]'
         ) as HTMLElement | null;
 
         if (interactiveEl) {
-          setIsHovered(true);
           const customText = interactiveEl.getAttribute('data-cursor-text') || '';
-          setCursorText(customText);
+          updateHoverState(true, customText);
         } else {
-          setIsHovered(false);
-          setCursorText('');
+          updateHoverState(false, '');
         }
       }
     };
 
     const handleMouseDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
-      // When clicking any placeholder or input to write something, disable animation immediately
       if (isFillableElement(target)) {
-        isVisibleRef.current = false;
-        setIsVisible(false);
+        setVisibility(false);
         return;
       }
-      setIsClicked(true);
+      isClicked = true;
+      // Instantly lock coordinates on click so it NEVER jumps or drifts away
+      targetX = e.clientX;
+      targetY = e.clientY;
+      currentX = e.clientX;
+      currentY = e.clientY;
     };
 
-    const handleMouseUp = () => setIsClicked(false);
+    const handleMouseUp = (e: MouseEvent) => {
+      isClicked = false;
+      targetX = e.clientX;
+      targetY = e.clientY;
+    };
 
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement | null;
       if (isFillableElement(target)) {
-        isVisibleRef.current = false;
-        setIsVisible(false);
+        setVisibility(false);
       }
     };
 
-    const handleFocusOut = () => {
-      // Allow re-enabling on next mouse move outside fillable fields
-    };
-
     const handleMouseLeave = () => {
-      isVisibleRef.current = false;
-      setIsVisible(false);
+      setVisibility(false);
     };
 
     const handleMouseEnter = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
       if (isFillableElement(target)) {
-        isVisibleRef.current = false;
-        setIsVisible(false);
+        setVisibility(false);
         return;
       }
-      isVisibleRef.current = true;
-      setIsVisible(true);
-      targetRef.current.x = e.clientX;
-      targetRef.current.y = e.clientY;
-      currentRef.current.x = e.clientX;
-      currentRef.current.y = e.clientY;
+      targetX = e.clientX;
+      targetY = e.clientY;
+      currentX = e.clientX;
+      currentY = e.clientY;
+      setVisibility(true);
+    };
+
+    // Keep coordinates rock-solid during page scroll
+    const handleScroll = () => {
+      // clientX / clientY remain fixed relative to viewport during scroll
     };
 
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     document.addEventListener('focusin', handleFocusIn, true);
-    document.addEventListener('focusout', handleFocusOut, true);
     document.documentElement.addEventListener('mouseleave', handleMouseLeave);
     document.documentElement.addEventListener('mouseenter', handleMouseEnter);
 
-    // Smooth RAF loop: dot snaps directly to pointer; aura lerps fluidly
+    // Continuous smooth animation loop directly updating DOM transforms
+    // Translation and scale are ALWAYS bundled into a single atomic transform string
     const renderLoop = () => {
-      if (isVisibleRef.current) {
-        if (dotRef.current) {
-          dotRef.current.style.transform = `translate3d(${targetRef.current.x}px, ${targetRef.current.y}px, 0) translate(-50%, -50%)`;
-        }
+      if (isVisible) {
+        const dotScale = isClicked ? 1.2 : 1;
+        const auraScale = isClicked ? 0.9 : 1;
 
-        const speed = 0.22;
-        currentRef.current.x += (targetRef.current.x - currentRef.current.x) * speed;
-        currentRef.current.y += (targetRef.current.y - currentRef.current.y) * speed;
+        // Dot stays directly under mouse pointer
+        dot.style.transform = `translate3d(${targetX}px, ${targetY}px, 0) translate(-50%, -50%) scale(${dotScale})`;
 
-        if (auraRef.current) {
-          auraRef.current.style.transform = `translate3d(${currentRef.current.x}px, ${currentRef.current.y}px, 0) translate(-50%, -50%)`;
-        }
+        // Aura smoothly lerps to mouse position
+        const speed = isClicked ? 0.45 : 0.22;
+        currentX += (targetX - currentX) * speed;
+        currentY += (targetY - currentY) * speed;
+
+        aura.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) translate(-50%, -50%) scale(${auraScale})`;
       }
 
-      rafId.current = requestAnimationFrame(renderLoop);
+      rafId = requestAnimationFrame(renderLoop);
     };
 
-    rafId.current = requestAnimationFrame(renderLoop);
+    rafId = requestAnimationFrame(renderLoop);
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('focusin', handleFocusIn, true);
-      document.removeEventListener('focusout', handleFocusOut, true);
       document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
       document.documentElement.removeEventListener('mouseenter', handleMouseEnter);
-      if (rafId.current) cancelAnimationFrame(rafId.current);
+      if (rafId) cancelAnimationFrame(rafId);
     };
   }, []);
 
-  if (isTouchDevice) return null;
-
   return (
     <div
-      className={`pointer-events-none fixed inset-0 z-[9999] overflow-hidden transition-opacity duration-150 ${
-        isVisible ? 'opacity-100' : 'opacity-0'
-      }`}
+      ref={containerRef}
+      className="pointer-events-none fixed inset-0 z-[9999] overflow-hidden opacity-0 transition-opacity duration-150"
+      style={{ pointerEvents: 'none' }}
     >
       {/* Outer fluid trailing aura */}
       <div
         ref={auraRef}
-        className={`fixed top-0 left-0 rounded-full flex items-center justify-center will-change-transform transition-[width,height,background-color,border-color,box-shadow] duration-200 ease-out ${
-          isHovered
-            ? 'w-12 h-12 bg-emerald-500/15 border-2 border-emerald-500/60 shadow-lg shadow-emerald-500/25'
-            : 'w-8 h-8 bg-emerald-500/10 border border-emerald-500/35'
-        } ${isClicked ? 'scale-90 bg-emerald-600/30' : ''}`}
+        className="fixed top-0 left-0 rounded-full flex items-center justify-center will-change-transform border transition-[width,height,background-color,border-color,box-shadow] duration-200 ease-out"
         style={{
-          transform: `translate3d(${currentRef.current.x}px, ${currentRef.current.y}px, 0) translate(-50%, -50%)`,
+          width: '32px',
+          height: '32px',
+          backgroundColor: 'rgba(16, 185, 129, 0.08)',
+          borderColor: 'rgba(16, 185, 129, 0.35)',
+          transform: 'translate3d(-100px, -100px, 0) translate(-50%, -50%)',
         }}
       >
-        {cursorText && (
-          <span className="text-[10px] font-bold text-emerald-900 tracking-tight whitespace-nowrap bg-white/95 px-2 py-0.5 rounded-full shadow-xs border border-emerald-200">
-            {cursorText}
-          </span>
-        )}
+        <span
+          ref={textRef}
+          style={{ display: 'none' }}
+          className="text-[10px] font-bold text-emerald-900 tracking-tight whitespace-nowrap bg-white/95 px-2 py-0.5 rounded-full shadow-xs border border-emerald-200"
+        />
       </div>
 
       {/* Center sharp dot cursor */}
       <div
         ref={dotRef}
-        className={`fixed top-0 left-0 rounded-full will-change-transform transition-[width,height,background-color] duration-150 ease-out ${
-          isHovered
-            ? 'w-2 h-2 bg-emerald-600 shadow-xs'
-            : 'w-2.5 h-2.5 bg-slate-900/90 shadow-xs'
-        } ${isClicked ? 'scale-125 bg-emerald-700' : ''}`}
+        className="fixed top-0 left-0 rounded-full will-change-transform shadow-xs transition-[width,height,background-color] duration-150 ease-out"
         style={{
-          transform: `translate3d(${targetRef.current.x}px, ${targetRef.current.y}px, 0) translate(-50%, -50%)`,
+          width: '10px',
+          height: '10px',
+          backgroundColor: 'rgba(15, 23, 42, 0.9)',
+          transform: 'translate3d(-100px, -100px, 0) translate(-50%, -50%)',
         }}
       />
     </div>

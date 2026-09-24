@@ -122,7 +122,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ initialService =
                   <picture>
                     <source srcSet="/images/shivam_avatar_96.webp" type="image/webp" />
                     <img
-                      src="/images/shivam_avatar_96.jpg"
+                      src="/images/shivam_realistic_portrait_1790262778042.webp"
                       alt="Shivam Bhardwaj"
                       width="56"
                       height="56"
