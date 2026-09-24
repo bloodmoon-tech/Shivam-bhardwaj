@@ -111,13 +111,7 @@ export const CaseStudies: React.FC<CaseStudiesProps> = ({ onRequestAudit }) => {
                 <picture>
                   <source
                     type="image/webp"
-                    srcSet={
-                      study.id.includes('fintech')
-                        ? '/images/case_study_fintech_veloce_500w.webp 500w, /images/case_study_fintech_veloce_1790258911546.webp 1200w'
-                        : study.id.includes('ecommerce')
-                        ? '/images/case_study_luxury_ecommerce_500w.webp 500w, /images/case_study_luxury_ecommerce_1790258898495.webp 1200w'
-                        : '/images/case_study_saas_kinetix_500w.webp 500w, /images/case_study_saas_kinetix_1790258876658.webp 1200w'
-                    }
+                    srcSet={`${study.image.replace(/_\d+(\.\w+)$/, '_500w$1')} 500w, ${study.image} 1200w`}
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
                   />
                   <img
