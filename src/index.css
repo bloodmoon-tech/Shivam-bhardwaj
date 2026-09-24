@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #FFFFFF;
+    color: #0F172A;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Improve touch responsiveness on mobile buttons & links */
+  button, a, input, select, textarea {
+    touch-action: manipulation;
+  }
+
+  /* Zero animation / transition when clicking placeholders or writing in fillable fields */
+  input, textarea, select, [contenteditable="true"] {
+    transition: none !important;
+    animation: none !important;
+    cursor: text !important;
+  }
+
+  select {
+    cursor: pointer !important;
+  }
+
+  input:focus, textarea:focus, select:focus, [contenteditable="true"]:focus {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  /* Clean static placeholder with zero movement or animation on focus */
+  ::placeholder {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Custom scrollbar styling for light theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F8FAFC;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Content visibility optimizations for below-the-fold mobile performance */
+.content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 800px;
+}
+
+/* Mobile safe area padding utilities */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
